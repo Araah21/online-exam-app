@@ -33,7 +33,13 @@ app.use(express.static(__dirname));
 app.use(express.json());
 
 // --- ROUTES ---
+// Add this new route: Redirect root URL to the exam page
+app.get('/', (req, res) => {
+    res.redirect('/exam.html');
+});
 
+// API Endpoint to receive exam results
+app.post('/api/submit-exam', (req, res) => {
 // API to receive results
 app.post('/api/submit-exam', (req, res) => {
     const { name, id, score, answers, submittedAt } = req.body;
