@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Online Examination</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: #f4f7f9;
+      color: #333;
+      line-height: 1.6;
+      padding: 20px;
+      -webkit-user-select: none;
+      -ms-user-select: none;
+      user-select: none;
+    }
+    .exam-container {
+      max-width: 800px;
+      margin: 0 auto;
+      background-color: #fff;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    }
+    h1, h2 {
+      text-align: center;
+      color: #0056b3;
+    }
+    .question-block {
+      margin-bottom: 25px;
+      padding-bottom: 15px;
+      border-bottom: 1px solid #eee;
+    }
+    .question-block p {
+      font-weight: bold;
+      margin-bottom: 10px;
+    }
+    .options label {
+      display: block;
+      margin-bottom: 8px;
+      cursor: pointer;
+    }
+    .student-info input {
+      width: 100%;
+      padding: 8px;
+      margin-top: 5px;
+      box-sizing: border-box;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+    #submitBtn {
+      display: block;
+      width: 100%;
+      padding: 12px;
+      background-color: #28a745;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      font-size: 18px;
+      cursor: pointer;
+    }
+    #results {
+      margin-top: 20px;
+      padding: 20px;
+      border-radius: 5px;
+      background-color: #e2e3e5;
+      text-align: center;
+      font-size: 1.2em;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <div class="exam-container" id="examContainer">
+    <h1>Online Examination</h1>
+    <div id="warningMessage" style="color: red; text-align: center; font-weight: bold; margin-bottom: 15px;"></div>
+
+    <form class="exam-form" id="examForm">
+      <div class="student-info">
+        <h2>Student Information</h2>
+        <label for="studentName">Full Name:</label>
+        <input type="text" id="studentName" name="studentName" required />
+        <label for="studentId">Student ID:</label>
+        <input type="text" id="studentId" name="studentId" required />
+      </div>
+
+      <h2>Exam Questions</h2>
+
+      <div class="question-block">
+        <p>1. What does HTML stand for?</p>
+        <div class="options">
+          <label><input type="radio" name="q1" value="a" required> a) HyperText Markup Language</label>
+          <label><input type="radio" name="q1" value="b"> b) HighText Machine Language</label>
+          <label><input type="radio" name="q1" value="c"> c) Hyperlink and Text Markup Language</label>
+        </div>
+      </div>
+
+      <div class="question-block">
+        <p>2. Which property is used in CSS to change the background color?</p>
+        <div class="options">
+          <label><input type="radio" name="q2" value="a" required> a) color</label>
+          <label><input type="radio" name="q2" value="b"> b) bgcolor</label>
+          <label><input type="radio" name="q2" value="c"> c) background-color</label>
+        </div>
+      </div>
+
+      <div class="question-block">
+        <p>3. What is the correct syntax for referring to an external script called "script.js"?</p>
+        <div class="options">
+          <label><input type="radio" name="q3" value="a" required> a) &lt;script href="script.js"&gt;&lt;/script&gt;</label>
+          <label><input type="radio" name="q3" value="b"> b) &lt;script src="script.js"&gt;&lt;/script&gt;</label>
+          <label><input type="radio" name="q3" value="c"> c) &lt;script name="script.js"&gt;&lt;/script&gt;</label>
+        </div>
+      </div>
+
+      <button type="button" id="submitBtn">Submit Exam</button>
+    </form>
+
+    <div id="results" style="display: none;"></div>
+  </div>
+
+  <script>
+    const correctAnswers = { q1: 'a', q2: 'c', q3: 'b' };
+    const totalQuestions = Object.keys(correctAnswers).length;
+    let tabSwitchCount = 0;
+    const tabSwitchLimit = 3;
+    let examEnded = false;
+
+    const warningMessageDiv = document.getElementById('warningMessage');
+    const submitBtn = document.getElementById('submitBtn');
+    const examForm = document.getElementById('examForm');
+    const resultsDiv = document.getElementById('results');
+
+    document.addEventListener('visibilitychange', function () {
+      if (document.hidden && !examEnded) {
+        tabSwitchCount++;
+        warningMessageDiv.textContent = `WARNING: You have switched tabs ${tabSwitchCount} time(s). After ${tabSwitchLimit} switches, the exam will automatically end.`;
+        alert(`WARNING: Tab switch detected (${tabSwitchCount}/${tabSwitchLimit}).`);
+        if (tabSwitchCount >= tabSwitchLimit) {
+          alert('You have exceeded the tab switch limit. Your exam will now be submitted.');
+          endExam();
+        }
+      }
+    });
+
+    document.addEventListener('contextmenu', event => event.preventDefault());
+    document.addEventListener('keydown', e => {
+      if ((e.ctrlKey && (e.key === 'c' || e.key === 'v' || e.key === 'u')) || e.key === 'F12') {
+        e.preventDefault();
+      }
+    });
+
+    submitBtn.addEventListener('click', () => {
+      if (confirm('Are you sure you want to submit your exam?')) {
+        endExam();
+      }
+    });
+
+    function endExam() {
+      if (examEnded) return;
+      const studentName = document.getElementById('studentName').value.trim();
+      const studentId = document.getElementById('studentId').value.trim();
+
+      if (!studentName || !studentId) {
+        alert("Please enter your name and student ID.");
+        return;
+      }
+
+      examEnded = true;
+
+      let score = 0;
+      const formData = new FormData(examForm);
+      const userAnswers = {};
+
+      for (let i = 1; i <= totalQuestions; i++) {
+        const q = 'q' + i;
+        const answer = formData.get(q);
+        userAnswers[q] = answer || "Not Answered";
+        if (answer === correctAnswers[q]) score++;
+      }
+
+      const scorePercentage = ((score / totalQuestions) * 100).toFixed(2);
+
+      examForm.style.display = 'none';
+      submitBtn.style.display = 'none';
+      warningMessageDiv.style.display = 'none';
+
+      resultsDiv.innerHTML = `
+        <h2>Exam Completed</h2>
+        <p>Your results have been recorded.</p>
+        <p>Score: ${score} out of ${totalQuestions} (${scorePercentage}%)</p>
+      `;
+      resultsDiv.style.display = 'block';
+
+      const submissionData = {
+        name: studentName,
+        id: studentId,
+        score: `${score}/${totalQuestions}`,
+        answers: userAnswers,
+        submittedAt: new Date().toLocaleString("en-US", { timeZone: "Asia/Manila" })
+      };
+
+      fetch('/api/submit-exam', {
+        method: 'POST',
+        body: JSON.stringify(submissionData),
+        headers: { 'Content-Type': 'application/json' }
+      })
+        .then(response => response.json())
+        .then(data => {
+          if (!data.success) {
+            resultsDiv.innerHTML += "<p style='color:red;'>Error: Could not save your results. Please contact your instructor.</p>";
+          }
+        })
+        .catch(err => {
+          console.error('Fetch Error:', err);
+          resultsDiv.innerHTML += "<p style='color:red;'>CRITICAL Error: Could not connect to the server. Please contact your instructor.</p>";
+        });
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,15 @@
+{
+  "name": "online-exam-app",
+  "version": "1.0.0",
+  "description": "An online exam application with a Node.js backend.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.19.2",
+    "sqlite3": "^5.1.7"
+  }
+}
