@@ -1,71 +1,8 @@
-const express = require('express');
-const sqlite3 = require('sqlite3').verbose();
-const path = require('path');
+app.get('/results', async (req, res) => {
+    try {
+        const dbResult = await db.execute("SELECT * FROM results ORDER BY submitted_at DESC");
+        const rows = dbResult.rows;
 
-const app = express();
-// Use the port Render provides, or 3000 for local testing
-const port = process.env.PORT || 3000;
-
-// --- DATABASE SETUP ---
-// Point the database to the persistent disk on Render
-const db = new sqlite3.Database('/var/data/exam_results.db', sqlite3.OPEN_READWRITE | sqlite3.OPEN_CREATE, (err) => {
-    if (err) {
-        console.error("Error opening database " + err.message);
-    } else {
-        console.log("Database connected successfully.");
-        // Create the results table if it doesn't exist
-        db.run('CREATE TABLE IF NOT EXISTS results (id INTEGER PRIMARY KEY AUTOINCREMENT, student_name TEXT, student_id TEXT, score TEXT, answers TEXT, submitted_at TEXT)', (err) => {
-            if (err) {
-                console.error("Error creating table " + err.message);
-            } else {
-                console.log("Results table is ready.");
-            }
-        });
-    }
-});
-
-// --- MIDDLEWARE ---
-// Serve static files from the project folder (for exam.html)
-app.use(express.static(__dirname));
-// Parse incoming JSON data (from our fetch request)
-app.use(express.json());
-
-// --- ROUTES ---
-
-// Redirect root URL to the exam page
-app.get('/', (req, res) => {
-    res.redirect('/exam.html');
-});
-
-// API Endpoint to receive exam results
-app.post('/api/submit-exam', (req, res) => {
-    const { name, id, score, answers, submittedAt } = req.body;
-
-    // Convert answers object to a string for database storage
-    const answersJson = JSON.stringify(answers);
-    
-    const sql = `INSERT INTO results (student_name, student_id, score, answers, submitted_at) VALUES (?, ?, ?, ?, ?)`;
-    
-    db.run(sql, [name, id, score, answersJson, submittedAt], function(err) {
-        if (err) {
-            console.error("Database error:", err.message);
-            return res.status(500).json({ success: false, message: 'Failed to save results.' });
-        }
-        console.log(`A new result has been added with ID: ${this.lastID}`);
-        res.status(200).json({ success: true, message: 'Results submitted successfully!' });
-    });
-});
-
-// A simple page for the instructor to view all results
-app.get('/results', (req, res) => {
-    const sql = "SELECT * FROM results ORDER BY submitted_at DESC";
-    db.all(sql, [], (err, rows) => {
-        if (err) {
-            res.status(500).send("Error retrieving results from database.");
-            return console.error(err.message);
-        }
-        
-        // Basic HTML table to display results
         let html = `
             <style>
                 body { font-family: sans-serif; padding: 20px; }
@@ -74,6 +11,7 @@ app.get('/results', (req, res) => {
                 th { background-color: #f2f2f2; }
                 tr:nth-child(even) { background-color: #f9f9f9; }
                 h1 { text-align: center; }
+                pre { white-space: pre-wrap; word-wrap: break-word; }
             </style>
             <h1>Exam Submissions</h1>
             <table>
@@ -84,7 +22,7 @@ app.get('/results', (req, res) => {
                     <th>Score</th>
                     <th>Answers</th>
                 </tr>`;
-        
+
         rows.forEach((row) => {
             html += `
                 <tr>
@@ -92,16 +30,14 @@ app.get('/results', (req, res) => {
                     <td>${row.student_name}</td>
                     <td>${row.student_id}</td>
                     <td>${row.score}</td>
-                    <td>${row.answers}</td>
+                    <td><pre>${row.answers}</pre></td>
                 </tr>`;
         });
-        
+
         html += '</table>';
         res.send(html);
-    });
-});
-
-// --- START SERVER ---
-app.listen(port, () => {
-    console.log(`Server running on port ${port}`);
+    } catch (e) {
+        console.error("Error retrieving results:", e);
+        res.status(500).send("Error retrieving results from database.");
+    }
 });
