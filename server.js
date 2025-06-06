@@ -3,22 +3,18 @@ const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 
 const app = express();
+// Use the port Render provides, or 3000 for local testing
 const port = process.env.PORT || 3000;
 
 // --- DATABASE SETUP ---
+// Point the database to the persistent disk on Render
 const db = new sqlite3.Database('/var/data/exam_results.db', sqlite3.OPEN_READWRITE | sqlite3.OPEN_CREATE, (err) => {
     if (err) {
         console.error("Error opening database " + err.message);
     } else {
         console.log("Database connected successfully.");
-        db.run(`CREATE TABLE IF NOT EXISTS results (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            student_name TEXT,
-            student_id TEXT,
-            score TEXT,
-            answers TEXT,
-            submitted_at TEXT
-        )`, (err) => {
+        // Create the results table if it doesn't exist
+        db.run('CREATE TABLE IF NOT EXISTS results (id INTEGER PRIMARY KEY AUTOINCREMENT, student_name TEXT, student_id TEXT, score TEXT, answers TEXT, submitted_at TEXT)', (err) => {
             if (err) {
                 console.error("Error creating table " + err.message);
             } else {
@@ -29,23 +25,27 @@ const db = new sqlite3.Database('/var/data/exam_results.db', sqlite3.OPEN_READWR
 });
 
 // --- MIDDLEWARE ---
+// Serve static files from the project folder (for exam.html)
 app.use(express.static(__dirname));
+// Parse incoming JSON data (from our fetch request)
 app.use(express.json());
 
 // --- ROUTES ---
-// Add this new route: Redirect root URL to the exam page
+
+// Redirect root URL to the exam page
 app.get('/', (req, res) => {
     res.redirect('/exam.html');
 });
 
 // API Endpoint to receive exam results
 app.post('/api/submit-exam', (req, res) => {
-// API to receive results
-app.post('/api/submit-exam', (req, res) => {
     const { name, id, score, answers, submittedAt } = req.body;
-    const answersJson = JSON.stringify(answers);
-    const sql = `INSERT INTO results (student_name, student_id, score, answers, submitted_at) VALUES (?, ?, ?, ?, ?)`;
 
+    // Convert answers object to a string for database storage
+    const answersJson = JSON.stringify(answers);
+    
+    const sql = `INSERT INTO results (student_name, student_id, score, answers, submitted_at) VALUES (?, ?, ?, ?, ?)`;
+    
     db.run(sql, [name, id, score, answersJson, submittedAt], function(err) {
         if (err) {
             console.error("Database error:", err.message);
@@ -56,7 +56,7 @@ app.post('/api/submit-exam', (req, res) => {
     });
 });
 
-// Results viewer for instructor
+// A simple page for the instructor to view all results
 app.get('/results', (req, res) => {
     const sql = "SELECT * FROM results ORDER BY submitted_at DESC";
     db.all(sql, [], (err, rows) => {
@@ -64,7 +64,8 @@ app.get('/results', (req, res) => {
             res.status(500).send("Error retrieving results from database.");
             return console.error(err.message);
         }
-
+        
+        // Basic HTML table to display results
         let html = `
             <style>
                 body { font-family: sans-serif; padding: 20px; }
@@ -83,7 +84,7 @@ app.get('/results', (req, res) => {
                     <th>Score</th>
                     <th>Answers</th>
                 </tr>`;
-
+        
         rows.forEach((row) => {
             html += `
                 <tr>
@@ -91,10 +92,10 @@ app.get('/results', (req, res) => {
                     <td>${row.student_name}</td>
                     <td>${row.student_id}</td>
                     <td>${row.score}</td>
-                    <td><pre>${row.answers}</pre></td>
+                    <td>${row.answers}</td>
                 </tr>`;
         });
-
+        
         html += '</table>';
         res.send(html);
     });
@@ -102,7 +103,5 @@ app.get('/results', (req, res) => {
 
 // --- START SERVER ---
 app.listen(port, () => {
-    console.log(`Server running at http://localhost:${port}`);
-    console.log(`Students should go to http://localhost:${port}/exam.html`);
-    console.log(`Instructor can view results at http://localhost:${port}/results`);
+    console.log(`Server running on port ${port}`);
 });
